@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, Play, RotateCcw, Users, Activity, ChevronRight, User, Shield, Circle, Sparkles, Newspaper, Download, Image as ImageIcon, FileText, ArrowRightLeft, Flag, List, LogOut } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { PDFDocument } from 'pdf-lib';
 
 // --- Gemini API Helper ---
 const apiKey = ""; // API key is injected by the environment
@@ -295,9 +296,28 @@ export default function CricketScorer() {
     });
   };
 
+  // Helper: capture full (unclipped) scorecard as a PNG data URL
+  const captureFullScorecard = async () => {
+    const el = scorecardRef.current;
+    // Temporarily expand the scrollable container so nothing is clipped
+    const prevHeight = el.style.height;
+    const prevMaxHeight = el.style.maxHeight;
+    const prevOverflow = el.style.overflow;
+    el.style.height = el.scrollHeight + 'px';
+    el.style.maxHeight = 'none';
+    el.style.overflow = 'visible';
+    try {
+      return await toPng(el, { pixelRatio: 2, cacheBust: true });
+    } finally {
+      el.style.height = prevHeight;
+      el.style.maxHeight = prevMaxHeight;
+      el.style.overflow = prevOverflow;
+    }
+  };
+
   const handleExportImage = async () => {
     try {
-      const dataUrl = await toPng(scorecardRef.current, { pixelRatio: 2 });
+      const dataUrl = await captureFullScorecard();
       const link = document.createElement('a');
       link.download = `${battingTeam}_vs_${bowlingTeam}_Scorecard.png`;
       link.href = dataUrl;
@@ -310,60 +330,64 @@ export default function CricketScorer() {
     }
   };
 
-  const handleExportPDF = () => {
-    const allInnings = [];
-    if (firstInningsScore) allInnings.push(firstInningsScore);
-    allInnings.push({ ...score, teamName: battingTeam });
+  const handleExportPDF = async () => {
+    try {
+      const dataUrl = await captureFullScorecard();
 
-    const rows = (inn) => inn.batsmen.map(b => `
-      <tr style="border-bottom:1px solid #e5e7eb;">
-        <td style="padding:6px 12px;">${b.name}</td>
-        <td style="padding:6px;color:#6b7280;font-style:italic;font-size:12px;">${b.status}</td>
-        <td style="padding:6px;text-align:right;font-weight:700;">${b.runs}</td>
-        <td style="padding:6px;text-align:right;">${b.balls}</td>
-        <td style="padding:6px 12px;text-align:right;">${b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '-'}</td>
-      </tr>`).join('');
+      const base64 = dataUrl.split(',')[1];
+      const imgBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
 
-    const bowlerRows = (inn) => inn.bowlers.filter(b => b.totalBalls > 0 || b.runsConceded > 0).map(b => {
-      const overs = Math.floor(b.totalBalls / 6);
-      const balls = b.totalBalls % 6;
-      const econ = b.totalBalls > 0 ? ((b.runsConceded / b.totalBalls) * 6).toFixed(1) : '-';
-      return `<tr style="border-bottom:1px solid #e5e7eb;">
-        <td style="padding:6px 12px;font-weight:500;">${b.name}</td>
-        <td style="padding:6px;text-align:right;">${overs}.${balls}</td>
-        <td style="padding:6px;text-align:right;font-weight:700;">${b.runsConceded}</td>
-        <td style="padding:6px;text-align:right;font-weight:700;color:#2563eb;">${b.wickets}</td>
-        <td style="padding:6px 12px;text-align:right;color:#6b7280;">${econ}</td>
-      </tr>`;
-    }).join('');
+      const pdfDoc = await PDFDocument.create();
+      const pngImage = await pdfDoc.embedPng(imgBytes);
+      const imgW = pngImage.width;
 
-    const html = `<!DOCTYPE html><html><head><title>Scorecard</title>
-    <style>body{font-family:sans-serif;padding:24px;color:#111827;}h2{font-size:20px;font-weight:700;margin-bottom:4px;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}th{background:#1e3a5f;color:#fff;padding:6px 12px;text-align:left;font-size:12px;}td{font-size:13px;}.extras{background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:6px 12px;font-size:13px;margin-bottom:8px;}@media print{button{display:none;}}</style>
-    </head><body>
-    ${allInnings.map(inn => `
-      <div style="margin-bottom:32px;">
-        <div style="background:#1e3a5f;color:#fff;padding:8px 12px;display:flex;justify-content:space-between;border-radius:4px 4px 0 0;">
-          <span style="font-weight:700;">${inn.teamName} Innings</span>
-          <span style="font-family:monospace;">${inn.runs}/${inn.wickets} (${inn.overs}.${inn.ballsInOver})</span>
-        </div>
-        <table><thead><tr><th>Batter</th><th></th><th style="text-align:right;">R</th><th style="text-align:right;">B</th><th style="text-align:right;">SR</th></tr></thead>
-        <tbody>${rows(inn)}</tbody></table>
-        <div class="extras"><strong>Extras:</strong> ${inn.extras.wides + inn.extras.noballs + inn.extras.byes + inn.extras.legbyes} (wd ${inn.extras.wides}, nb ${inn.extras.noballs})</div>
-        <table><thead><tr><th>Bowler</th><th style="text-align:right;">O</th><th style="text-align:right;">R</th><th style="text-align:right;">W</th><th style="text-align:right;">Econ</th></tr></thead>
-        <tbody>${bowlerRows(inn)}</tbody></table>
-      </div>`).join('')}
-    </body></html>`;
+      // A4 in PDF points (72 dpi)
+      const A4_W = 595.28;
+      const A4_H = 841.89;
+      const margin = 20;
+      const printW = A4_W - margin * 2;
+      const printH = A4_H - margin * 2; // usable height per page
 
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:800px;height:1000px;border:none;';
-    document.body.appendChild(iframe);
-    iframe.contentDocument.open();
-    iframe.contentDocument.write(html);
-    iframe.contentDocument.close();
-    setTimeout(() => {
-      iframe.contentWindow.print();
-      setTimeout(() => document.body.removeChild(iframe), 1000);
-    }, 300);
+      // Scale image to fit A4 width
+      const scale = printW / imgW;
+      const scaledH = pngImage.height * scale;
+
+      const totalPages = Math.ceil(scaledH / printH);
+
+      for (let i = 0; i < totalPages; i++) {
+        const page = pdfDoc.addPage([A4_W, A4_H]);
+
+        // Vertical offset into the scaled image where this page starts (from top)
+        const sliceStart = i * printH;
+        const sliceH = Math.min(printH, scaledH - sliceStart);
+
+        // PDF origin is bottom-left. Position the full image so:
+        // - image top = page top - margin - sliceStart (above the page for pages > 0)
+        // - PDF viewers naturally clip overflow outside the page rect
+        const imageBottomY = (A4_H - margin) - scaledH + sliceStart;
+
+        page.drawImage(pngImage, {
+          x: margin,
+          y: imageBottomY,
+          width: printW,
+          height: scaledH,
+        });
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `${battingTeam}_vs_${bowlingTeam}_Scorecard.pdf`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export PDF failed', err);
+      alert('PDF export failed. Please try again.');
+    }
   };
 
   const handleRetire = (dismissedPlayer) => {
