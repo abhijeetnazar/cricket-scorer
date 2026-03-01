@@ -1393,11 +1393,11 @@ export default function CricketScorer() {
           <Button variant="success" className="h-14 text-xl font-bold" onClick={() => handleScoring(6)}>6</Button>
 
           {/* Row 2: Extras + Undo */}
-          <Button variant="action" className="h-12 text-xs font-bold text-orange-600 border-orange-200 bg-orange-50" onClick={() => handleScoring(0, 'wide')}>WD</Button>
-          <Button variant="action" className="h-12 text-xs font-bold text-yellow-600 border-yellow-200 bg-yellow-50" onClick={() => handleScoring(0, 'noball')}>NB</Button>
-          <Button variant="action" className="h-12 text-xs font-bold text-teal-700 border-teal-200 bg-teal-50" onClick={() => handleScoring(1, 'bye')}>B</Button>
-          <Button variant="action" className="h-12 text-xs font-bold text-cyan-700 border-cyan-200 bg-cyan-50" onClick={() => handleScoring(1, 'legbye')}>LB</Button>
-          <Button variant="action" className="h-12 text-xs font-bold text-purple-700 border-purple-200 bg-purple-50" onClick={() => setCustomRunsModal({ show: true, runs: '' })}>+Runs</Button>
+          <Button variant="action" className="h-12 text-xl font-bold text-orange-600 border-orange-200 bg-orange-50" onClick={() => handleScoring(0, 'wide')}>WD</Button>
+          <Button variant="action" className="h-12 text-xl font-bold text-yellow-600 border-yellow-200 bg-yellow-50" onClick={() => handleScoring(0, 'noball')}>NB</Button>
+          <Button variant="action" className="h-12 text-xl font-bold text-teal-700 border-teal-200 bg-teal-50" onClick={() => handleScoring(1, 'bye')}>B</Button>
+          <Button variant="action" className="h-12 text-xl font-bold text-cyan-700 border-cyan-200 bg-cyan-50" onClick={() => handleScoring(1, 'legbye')}>LB</Button>
+          <Button variant="action" className="h-12 text-xl font-bold text-purple-700 border-purple-200 bg-purple-50" onClick={() => setCustomRunsModal({ show: true, runs: '' })}>+</Button>
           <button
             onClick={handleUndo}
             disabled={historyLength === 0}
