@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, Play, RotateCcw, Users, Activity, ChevronRight, User, Shield, Circle, Sparkles, Newspaper, Download, Image as ImageIcon, FileText, ArrowRightLeft, Flag, List, LogOut } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 // --- Gemini API Helper ---
 const apiKey = ""; // API key is injected by the environment
@@ -294,43 +296,33 @@ export default function CricketScorer() {
     });
   };
 
-  const loadScript = (src) => {
-    return new Promise((resolve, reject) => {
-      if (document.querySelector(`script[src="${src}"]`)) return resolve();
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  };
-
   const handleExportImage = async () => {
     try {
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-      const canvas = await window.html2canvas(scorecardRef.current, { scale: 2 });
+      const canvas = await html2canvas(scorecardRef.current, { scale: 2, useCORS: true });
       const link = document.createElement('a');
       link.download = `${battingTeam}_vs_${bowlingTeam}_Scorecard.png`;
       link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch (err) {
-      console.error("Export failed", err);
+      console.error("Export image failed", err);
+      alert('Export failed. Please try again.');
     }
   };
 
   const handleExportPDF = async () => {
     try {
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-      const canvas = await window.html2canvas(scorecardRef.current, { scale: 2 });
+      const canvas = await html2canvas(scorecardRef.current, { scale: 2, useCORS: true });
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${battingTeam}_vs_${bowlingTeam}_Scorecard.pdf`);
     } catch (err) {
-      console.error("Export failed", err);
+      console.error("Export PDF failed", err);
+      alert('Export failed. Please try again.');
     }
   };
 
