@@ -1382,42 +1382,46 @@ export default function CricketScorer() {
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="grid grid-cols-4 gap-3">
+        {/* Controls — 2 rows of 6 */}
+        <div className="grid grid-cols-6 gap-2">
+          {/* Row 1: Runs */}
           <Button variant="secondary" className="h-14 text-xl font-bold" onClick={() => handleScoring(0)}>0</Button>
           <Button variant="secondary" className="h-14 text-xl font-bold" onClick={() => handleScoring(1)}>1</Button>
           <Button variant="secondary" className="h-14 text-xl font-bold" onClick={() => handleScoring(2)}>2</Button>
           <Button variant="secondary" className="h-14 text-xl font-bold" onClick={() => handleScoring(3)}>3</Button>
-
           <Button variant="success" className="h-14 text-xl font-bold" onClick={() => handleScoring(4)}>4</Button>
           <Button variant="success" className="h-14 text-xl font-bold" onClick={() => handleScoring(6)}>6</Button>
-          <Button variant="action" className="h-14 text-sm font-bold text-orange-600 border-orange-200 bg-orange-50" onClick={() => handleScoring(0, 'wide')}>WD</Button>
-          <Button variant="action" className="h-14 text-sm font-bold text-yellow-600 border-yellow-200 bg-yellow-50" onClick={() => handleScoring(0, 'noball')}>NB</Button>
 
-          <Button variant="action" className="h-14 text-sm font-bold text-teal-700 border-teal-200 bg-teal-50" onClick={() => handleScoring(1, 'bye')}>B</Button>
-          <Button variant="action" className="h-14 text-sm font-bold text-cyan-700 border-cyan-200 bg-cyan-50" onClick={() => handleScoring(1, 'legbye')}>LB</Button>
-          <Button
-            variant="action"
-            className="col-span-2 h-14 text-sm font-bold text-purple-700 border-purple-200 bg-purple-50"
-            onClick={() => setCustomRunsModal({ show: true, runs: '' })}
+          {/* Row 2: Extras + Undo */}
+          <Button variant="action" className="h-12 text-xs font-bold text-orange-600 border-orange-200 bg-orange-50" onClick={() => handleScoring(0, 'wide')}>WD</Button>
+          <Button variant="action" className="h-12 text-xs font-bold text-yellow-600 border-yellow-200 bg-yellow-50" onClick={() => handleScoring(0, 'noball')}>NB</Button>
+          <Button variant="action" className="h-12 text-xs font-bold text-teal-700 border-teal-200 bg-teal-50" onClick={() => handleScoring(1, 'bye')}>B</Button>
+          <Button variant="action" className="h-12 text-xs font-bold text-cyan-700 border-cyan-200 bg-cyan-50" onClick={() => handleScoring(1, 'legbye')}>LB</Button>
+          <Button variant="action" className="h-12 text-xs font-bold text-purple-700 border-purple-200 bg-purple-50" onClick={() => setCustomRunsModal({ show: true, runs: '' })}>+Runs</Button>
+          <button
+            onClick={handleUndo}
+            disabled={historyLength === 0}
+            className="h-12 rounded-lg border flex items-center justify-center text-xs font-bold transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100"
           >
-            + Custom
-          </Button>
+            <RotateCcw size={15} />
+          </button>
+        </div>
 
+        {/* RETIRE + WICKET */}
+        <div className="grid grid-cols-2 gap-3 mt-3">
           <Button
             variant="secondary"
-            className="col-span-2 h-14 text-lg font-bold mt-2 flex items-center justify-center gap-2 border-2 border-gray-300"
+            className="h-14 text-base font-bold flex items-center justify-center gap-2 border-2 border-gray-300"
             onClick={() => setRetireModal({ show: true, player: 'striker' })}
           >
-            <LogOut size={20} /> RETIRE
+            <LogOut size={18} /> RETIRE
           </Button>
-
           <Button
             variant="danger"
-            className="col-span-2 h-14 text-lg font-bold mt-2 flex items-center justify-center gap-2"
+            className="h-14 text-base font-bold flex items-center justify-center gap-2"
             onClick={() => setWicketModal({ show: true, runs: 0, extra: 'none', dismissed: 'striker' })}
           >
-            <Shield size={20} /> WICKET
+            <Shield size={18} /> WICKET
           </Button>
         </div>
 
@@ -1444,17 +1448,7 @@ export default function CricketScorer() {
             </Button>
           </div>
 
-          <div className="flex items-center justify-between">
-            {historyLength > 0 ? (
-              <button
-                onClick={handleUndo}
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors text-sm font-medium"
-              >
-                <RotateCcw size={14} /> Undo
-              </button>
-            ) : (
-              <span className="text-xs text-gray-300">No history</span>
-            )}
+          <div className="flex justify-end">
             <button
               onClick={() => {
                 setConfirmModal({
