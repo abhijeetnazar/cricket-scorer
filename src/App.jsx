@@ -183,6 +183,51 @@ export default function CricketScorer() {
     }
   }, [gameState, matchConfig, secondInningsConfig, innings, battingTeam, bowlingTeam, target, score, players, firstInningsScore]);
 
+  // --- Undo History ---
+  const HISTORY_KEY = 'cricket_scorer_history';
+  const MAX_HISTORY = 60;
+
+  const saveToHistory = () => {
+    try {
+      const snapshot = { gameState, matchConfig, secondInningsConfig, innings, battingTeam, bowlingTeam, target, score, players, firstInningsScore };
+      const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      history.push(snapshot);
+      if (history.length > MAX_HISTORY) history.shift();
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    } catch (e) { console.error('Could not save history', e); }
+  };
+
+  const [historyLength, setHistoryLength] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('cricket_scorer_history') || '[]').length; } catch { return 0; }
+  });
+
+  const handleUndo = () => {
+    try {
+      const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      if (history.length === 0) return;
+      const prev = history.pop();
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      setHistoryLength(history.length);
+      // Close any open modals
+      setShowNewBatsmanModal(false);
+      setShowNewBowlerModal(false);
+      setWicketModal({ show: false, runs: 0, extra: 'none', dismissed: 'striker' });
+      setRetireModal({ show: false, player: 'striker' });
+      setConfirmModal({ show: false, message: '', onConfirm: null });
+      // Restore full state
+      setGameState(prev.gameState);
+      setMatchConfig(prev.matchConfig);
+      setSecondInningsConfig(prev.secondInningsConfig);
+      setInnings(prev.innings);
+      setBattingTeam(prev.battingTeam);
+      setBowlingTeam(prev.bowlingTeam);
+      setTarget(prev.target);
+      setScore(prev.score);
+      setPlayers(prev.players);
+      setFirstInningsScore(prev.firstInningsScore);
+    } catch (e) { console.error('Undo failed', e); }
+  };
+
   // --- Helpers ---
 
   const currentRunRate = () => {
@@ -227,7 +272,10 @@ export default function CricketScorer() {
       show: true,
       message: "Are you sure you want to start a new match? This will erase the current match data.",
       onConfirm: () => {
-        try { localStorage.removeItem('cricket_scorer_state'); } catch (e) { }
+        try {
+          localStorage.removeItem('cricket_scorer_state');
+          localStorage.removeItem('cricket_scorer_history');
+        } catch (e) { }
 
         setMatchConfig({ teamA: 'Strikers', teamB: 'Titans', totalOvers: 5, playersPerTeam: 11, striker: '', nonStriker: '', bowler: '' });
         setSecondInningsConfig({ striker: '', nonStriker: '', bowler: '' });
@@ -391,6 +439,8 @@ export default function CricketScorer() {
   };
 
   const handleRetire = (dismissedPlayer) => {
+    saveToHistory();
+    setHistoryLength(h => h + 1);
     let newScore = { ...score };
     let newPlayers = { ...players };
 
@@ -431,6 +481,8 @@ export default function CricketScorer() {
   const handleScoring = (runs, type = 'normal', isWicket = false, dismissedPlayer = 'striker') => {
     // Check if match is already over
     if (gameState === 'FINISHED') return;
+    saveToHistory();
+    setHistoryLength(h => h + 1);
 
     let newScore = { ...score };
     let newPlayers = { ...players };
@@ -615,11 +667,13 @@ export default function CricketScorer() {
     setConfirmModal({
       show: true,
       message: "Are you sure you want to declare/end this innings?",
-      onConfirm: () => endInnings(score)
+      onConfirm: () => { saveToHistory(); setHistoryLength(h => h + 1); endInnings(score); }
     });
   };
 
   const swapBatsmen = () => {
+    saveToHistory();
+    setHistoryLength(h => h + 1);
     setPlayers(prev => ({
       ...prev,
       striker: prev.nonStriker,
@@ -628,6 +682,8 @@ export default function CricketScorer() {
   };
 
   const startSecondInnings = () => {
+    saveToHistory();
+    setHistoryLength(h => h + 1);
     setFirstInningsScore({ ...score, teamName: battingTeam });
     setInnings(2);
     // Swap Teams
@@ -893,6 +949,11 @@ export default function CricketScorer() {
           <Button onClick={() => setShowScorecard(true)} variant="action" className="w-full py-3 text-lg flex justify-center items-center gap-2">
             <Activity size={20} /> View Scorecard
           </Button>
+          {historyLength > 0 && (
+            <button onClick={handleUndo} className="w-full mt-2 flex items-center justify-center gap-2 text-sm text-blue-200 hover:text-white py-2 transition-colors">
+              <RotateCcw size={14} /> Undo Last Action
+            </button>
+          )}
         </div>
         {renderScorecard()}
       </div>
@@ -954,6 +1015,11 @@ export default function CricketScorer() {
             >
               <Newspaper size={20} /> ✨ Generate Match Report
             </Button>
+            {historyLength > 0 && (
+              <Button onClick={handleUndo} variant="secondary" className="w-full py-3 flex items-center justify-center gap-2 border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100">
+                <RotateCcw size={18} /> Undo Last Action
+              </Button>
+            )}
             <Button onClick={handleNewMatch} variant="primary" className="w-full py-3">
               New Match
             </Button>
@@ -1293,7 +1359,17 @@ export default function CricketScorer() {
             </Button>
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex items-center justify-between">
+            {historyLength > 0 ? (
+              <button
+                onClick={handleUndo}
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors text-sm font-medium"
+              >
+                <RotateCcw size={14} /> Undo
+              </button>
+            ) : (
+              <span className="text-xs text-gray-300">No history</span>
+            )}
             <button
               onClick={() => {
                 setConfirmModal({
