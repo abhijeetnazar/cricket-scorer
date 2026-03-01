@@ -163,6 +163,7 @@ export default function CricketScorer() {
   const [modalCallback, setModalCallback] = useState(null); // Function to run after name entry
   const [wicketModal, setWicketModal] = useState({ show: false, runs: 0, extra: 'none', dismissed: 'striker' });
   const [retireModal, setRetireModal] = useState({ show: false, player: 'striker' });
+  const [customRunsModal, setCustomRunsModal] = useState({ show: false, runs: '' });
 
   // AI State
   const [aiResponse, setAiResponse] = useState(null);
@@ -213,6 +214,7 @@ export default function CricketScorer() {
       setShowNewBowlerModal(false);
       setWicketModal({ show: false, runs: 0, extra: 'none', dismissed: 'striker' });
       setRetireModal({ show: false, player: 'striker' });
+      setCustomRunsModal({ show: false, runs: '' });
       setConfirmModal({ show: false, message: '', onConfirm: null });
       // Restore full state
       setGameState(prev.gameState);
@@ -496,6 +498,12 @@ export default function CricketScorer() {
       if (type === 'wide') newScore.extras.wides += 1 + runs; // runs here are byes ran on wide
       if (type === 'noball') newScore.extras.noballs += 1 + runs;
     }
+    if (type === 'bye') {
+      newScore.extras.byes += runs;
+    }
+    if (type === 'legbye') {
+      newScore.extras.legbyes += runs;
+    }
 
     // 2. Update Score Globals
     newScore.runs += runsToAdd;
@@ -508,6 +516,7 @@ export default function CricketScorer() {
     if (isLegalBall && type !== 'wide') {
       newPlayers.striker.balls += 1;
     }
+    // Byes & Leg Byes: runs go to team total, not to batsman
     if (type === 'normal' || type === 'noball') {
       newPlayers.striker.runs += runs;
     }
@@ -1039,6 +1048,72 @@ export default function CricketScorer() {
       {renderAiModal()}
       {renderScorecard()}
 
+      {/* Custom Runs Modal */}
+      {customRunsModal.show && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[55] p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 className="text-xl font-bold mb-1 text-gray-800">Custom Runs</h3>
+            <p className="text-sm text-gray-500 mb-5">Enter any run value and type</p>
+
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Runs</label>
+              <input
+                autoFocus
+                type="number"
+                min="0"
+                max="99"
+                value={customRunsModal.runs}
+                onChange={e => setCustomRunsModal(m => ({ ...m, runs: e.target.value }))}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const r = parseInt(customRunsModal.runs, 10);
+                    if (!isNaN(r) && r >= 0) {
+                      handleScoring(r, customRunsModal.type || 'normal');
+                      setCustomRunsModal({ show: false, runs: '' });
+                    }
+                  }
+                }}
+                placeholder="e.g. 5"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl font-bold text-center focus:ring-2 focus:ring-purple-500 outline-none"
+              />
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[['normal', 'Runs'], ['bye', 'Bye'], ['legbye', 'Leg Bye']].map(([val, label]) => (
+                  <Button
+                    key={val}
+                    variant={(customRunsModal.type || 'normal') === val ? 'primary' : 'secondary'}
+                    onClick={() => setCustomRunsModal(m => ({ ...m, type: val }))}
+                    className="text-sm"
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="secondary" className="flex-1 py-3" onClick={() => setCustomRunsModal({ show: false, runs: '' })}>Cancel</Button>
+              <Button
+                variant="primary"
+                className="flex-1 py-3 bg-purple-600 hover:bg-purple-700"
+                onClick={() => {
+                  const r = parseInt(customRunsModal.runs, 10);
+                  if (!isNaN(r) && r >= 0) {
+                    handleScoring(r, customRunsModal.type || 'normal');
+                    setCustomRunsModal({ show: false, runs: '' });
+                  }
+                }}
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Retire Modal */}
       {retireModal.show && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[55] p-4 backdrop-blur-sm">
@@ -1319,6 +1394,16 @@ export default function CricketScorer() {
           <Button variant="action" className="h-14 text-sm font-bold text-orange-600 border-orange-200 bg-orange-50" onClick={() => handleScoring(0, 'wide')}>WD</Button>
           <Button variant="action" className="h-14 text-sm font-bold text-yellow-600 border-yellow-200 bg-yellow-50" onClick={() => handleScoring(0, 'noball')}>NB</Button>
 
+          <Button variant="action" className="h-14 text-sm font-bold text-teal-700 border-teal-200 bg-teal-50" onClick={() => handleScoring(1, 'bye')}>B</Button>
+          <Button variant="action" className="h-14 text-sm font-bold text-cyan-700 border-cyan-200 bg-cyan-50" onClick={() => handleScoring(1, 'legbye')}>LB</Button>
+          <Button
+            variant="action"
+            className="col-span-2 h-14 text-sm font-bold text-purple-700 border-purple-200 bg-purple-50"
+            onClick={() => setCustomRunsModal({ show: true, runs: '' })}
+          >
+            + Custom
+          </Button>
+
           <Button
             variant="secondary"
             className="col-span-2 h-14 text-lg font-bold mt-2 flex items-center justify-center gap-2 border-2 border-gray-300"
@@ -1338,7 +1423,7 @@ export default function CricketScorer() {
 
         {/* Extras Summary */}
         <div className="text-center text-gray-400 text-xs mt-4">
-          Extras: {score.extras.wides} WD, {score.extras.noballs} NB, {score.extras.byes + score.extras.legbyes} B/LB
+          Extras: {score.extras.wides} WD, {score.extras.noballs} NB, {score.extras.byes} B, {score.extras.legbyes} LB
         </div>
 
         <div className="flex flex-col gap-4 mt-6">
