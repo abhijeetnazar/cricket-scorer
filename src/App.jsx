@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, Play, RotateCcw, Users, Activity, ChevronRight, User, Shield, Circle, Sparkles, Newspaper, Download, Image as ImageIcon, FileText, ArrowRightLeft, Flag, List, LogOut } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import { toPng } from 'html-to-image';
 
 // --- Gemini API Helper ---
 const apiKey = ""; // API key is injected by the environment
@@ -298,32 +297,73 @@ export default function CricketScorer() {
 
   const handleExportImage = async () => {
     try {
-      const canvas = await html2canvas(scorecardRef.current, { scale: 2, useCORS: true });
+      const dataUrl = await toPng(scorecardRef.current, { pixelRatio: 2 });
       const link = document.createElement('a');
       link.download = `${battingTeam}_vs_${bowlingTeam}_Scorecard.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err) {
-      console.error("Export image failed", err);
+      console.error('Export image failed', err);
       alert('Export failed. Please try again.');
     }
   };
 
-  const handleExportPDF = async () => {
-    try {
-      const canvas = await html2canvas(scorecardRef.current, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${battingTeam}_vs_${bowlingTeam}_Scorecard.pdf`);
-    } catch (err) {
-      console.error("Export PDF failed", err);
-      alert('Export failed. Please try again.');
-    }
+  const handleExportPDF = () => {
+    const allInnings = [];
+    if (firstInningsScore) allInnings.push(firstInningsScore);
+    allInnings.push({ ...score, teamName: battingTeam });
+
+    const rows = (inn) => inn.batsmen.map(b => `
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="padding:6px 12px;">${b.name}</td>
+        <td style="padding:6px;color:#6b7280;font-style:italic;font-size:12px;">${b.status}</td>
+        <td style="padding:6px;text-align:right;font-weight:700;">${b.runs}</td>
+        <td style="padding:6px;text-align:right;">${b.balls}</td>
+        <td style="padding:6px 12px;text-align:right;">${b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '-'}</td>
+      </tr>`).join('');
+
+    const bowlerRows = (inn) => inn.bowlers.filter(b => b.totalBalls > 0 || b.runsConceded > 0).map(b => {
+      const overs = Math.floor(b.totalBalls / 6);
+      const balls = b.totalBalls % 6;
+      const econ = b.totalBalls > 0 ? ((b.runsConceded / b.totalBalls) * 6).toFixed(1) : '-';
+      return `<tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="padding:6px 12px;font-weight:500;">${b.name}</td>
+        <td style="padding:6px;text-align:right;">${overs}.${balls}</td>
+        <td style="padding:6px;text-align:right;font-weight:700;">${b.runsConceded}</td>
+        <td style="padding:6px;text-align:right;font-weight:700;color:#2563eb;">${b.wickets}</td>
+        <td style="padding:6px 12px;text-align:right;color:#6b7280;">${econ}</td>
+      </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html><head><title>Scorecard</title>
+    <style>body{font-family:sans-serif;padding:24px;color:#111827;}h2{font-size:20px;font-weight:700;margin-bottom:4px;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}th{background:#1e3a5f;color:#fff;padding:6px 12px;text-align:left;font-size:12px;}td{font-size:13px;}.extras{background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:6px 12px;font-size:13px;margin-bottom:8px;}@media print{button{display:none;}}</style>
+    </head><body>
+    ${allInnings.map(inn => `
+      <div style="margin-bottom:32px;">
+        <div style="background:#1e3a5f;color:#fff;padding:8px 12px;display:flex;justify-content:space-between;border-radius:4px 4px 0 0;">
+          <span style="font-weight:700;">${inn.teamName} Innings</span>
+          <span style="font-family:monospace;">${inn.runs}/${inn.wickets} (${inn.overs}.${inn.ballsInOver})</span>
+        </div>
+        <table><thead><tr><th>Batter</th><th></th><th style="text-align:right;">R</th><th style="text-align:right;">B</th><th style="text-align:right;">SR</th></tr></thead>
+        <tbody>${rows(inn)}</tbody></table>
+        <div class="extras"><strong>Extras:</strong> ${inn.extras.wides + inn.extras.noballs + inn.extras.byes + inn.extras.legbyes} (wd ${inn.extras.wides}, nb ${inn.extras.noballs})</div>
+        <table><thead><tr><th>Bowler</th><th style="text-align:right;">O</th><th style="text-align:right;">R</th><th style="text-align:right;">W</th><th style="text-align:right;">Econ</th></tr></thead>
+        <tbody>${bowlerRows(inn)}</tbody></table>
+      </div>`).join('')}
+    </body></html>`;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:800px;height:1000px;border:none;';
+    document.body.appendChild(iframe);
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => {
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 300);
   };
 
   const handleRetire = (dismissedPlayer) => {
