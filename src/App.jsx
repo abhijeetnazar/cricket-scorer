@@ -164,6 +164,14 @@ export default function CricketScorer() {
   const [wicketModal, setWicketModal] = useState({ show: false, runs: 0, extra: 'none', dismissed: 'striker' });
   const [retireModal, setRetireModal] = useState({ show: false, player: 'striker' });
   const [customRunsModal, setCustomRunsModal] = useState({ show: false, runs: '' });
+  const [extrasModal, setExtrasModal] = useState({ show: false, type: 'wide', runs: 0 });
+
+  const EXTRAS_META = {
+    wide: { label: 'Wide', short: 'WD', color: 'orange', note: '+ 1 penalty auto-added' },
+    noball: { label: 'No Ball', short: 'NB', color: 'yellow', note: '+ 1 penalty auto-added' },
+    bye: { label: 'Bye', short: 'B', color: 'teal', note: 'Runs to team, not batsman' },
+    legbye: { label: 'Leg Bye', short: 'LB', color: 'cyan', note: 'Runs to team, not batsman' },
+  };
 
   // AI State
   const [aiResponse, setAiResponse] = useState(null);
@@ -215,6 +223,7 @@ export default function CricketScorer() {
       setWicketModal({ show: false, runs: 0, extra: 'none', dismissed: 'striker' });
       setRetireModal({ show: false, player: 'striker' });
       setCustomRunsModal({ show: false, runs: '' });
+      setExtrasModal({ show: false, type: 'wide', runs: 0 });
       setConfirmModal({ show: false, message: '', onConfirm: null });
       // Restore full state
       setGameState(prev.gameState);
@@ -1114,6 +1123,49 @@ export default function CricketScorer() {
         </div>
       )}
 
+      {/* Extras Runs Modal */}
+      {extrasModal.show && (() => {
+        const meta = EXTRAS_META[extrasModal.type];
+        return (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[55] p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+              <h3 className="text-xl font-bold mb-1 text-gray-800">{meta.label}</h3>
+              <p className="text-xs text-gray-400 mb-5">{meta.note}</p>
+
+              <label className="block text-sm font-medium text-gray-700 mb-3">Runs scored off this ball</label>
+              <div className="grid grid-cols-7 gap-2 mb-6">
+                {[0, 1, 2, 3, 4, 5, 6].map(r => (
+                  <button
+                    key={r}
+                    onClick={() => setExtrasModal(m => ({ ...m, runs: r }))}
+                    className={`h-11 rounded-lg text-lg font-bold border transition-all active:scale-95
+                      ${extrasModal.runs === r
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-blue-300'}`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="secondary" className="flex-1 py-3" onClick={() => setExtrasModal({ show: false, type: 'wide', runs: 0 })}>Cancel</Button>
+                <Button
+                  variant="primary"
+                  className="flex-1 py-3"
+                  onClick={() => {
+                    handleScoring(extrasModal.runs, extrasModal.type);
+                    setExtrasModal({ show: false, type: 'wide', runs: 0 });
+                  }}
+                >
+                  Confirm
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Retire Modal */}
       {retireModal.show && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[55] p-4 backdrop-blur-sm">
@@ -1393,10 +1445,10 @@ export default function CricketScorer() {
           <Button variant="success" className="h-14 text-xl font-bold" onClick={() => handleScoring(6)}>6</Button>
 
           {/* Row 2: Extras + Undo */}
-          <Button variant="action" className="h-12 text-xl font-bold text-orange-600 border-orange-200 bg-orange-50" onClick={() => handleScoring(0, 'wide')}>WD</Button>
-          <Button variant="action" className="h-12 text-xl font-bold text-yellow-600 border-yellow-200 bg-yellow-50" onClick={() => handleScoring(0, 'noball')}>NB</Button>
-          <Button variant="action" className="h-12 text-xl font-bold text-teal-700 border-teal-200 bg-teal-50" onClick={() => handleScoring(1, 'bye')}>B</Button>
-          <Button variant="action" className="h-12 text-xl font-bold text-cyan-700 border-cyan-200 bg-cyan-50" onClick={() => handleScoring(1, 'legbye')}>LB</Button>
+          <Button variant="action" className="h-12 text-xl font-bold text-orange-600 border-orange-200 bg-orange-50" onClick={() => setExtrasModal({ show: true, type: 'wide', runs: 0 })}>WD</Button>
+          <Button variant="action" className="h-12 text-xl font-bold text-yellow-600 border-yellow-200 bg-yellow-50" onClick={() => setExtrasModal({ show: true, type: 'noball', runs: 0 })}>NB</Button>
+          <Button variant="action" className="h-12 text-xl font-bold text-teal-700 border-teal-200 bg-teal-50" onClick={() => setExtrasModal({ show: true, type: 'bye', runs: 0 })}>B</Button>
+          <Button variant="action" className="h-12 text-xl font-bold text-cyan-700 border-cyan-200 bg-cyan-50" onClick={() => setExtrasModal({ show: true, type: 'legbye', runs: 0 })}>LB</Button>
           <Button variant="action" className="h-12 text-xl font-bold text-purple-700 border-purple-200 bg-purple-50" onClick={() => setCustomRunsModal({ show: true, runs: '' })}>+</Button>
           <button
             onClick={handleUndo}
