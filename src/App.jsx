@@ -1475,6 +1475,22 @@ export default function CricketScorer() {
           >
             <Shield size={18} /> WICKET
           </Button>
+
+          <Button
+            onClick={() => setShowScorecard(true)}
+            variant="action"
+            className="w-full flex items-center justify-center gap-2 py-3 font-semibold text-blue-700 bg-blue-50 border-blue-200"
+          >
+            <Activity size={18} /> Full Scorecard
+          </Button>
+          <Button
+            onClick={handleDeclare}
+            variant="action"
+            className="w-full flex items-center justify-center gap-2 py-3 font-semibold text-red-700 bg-red-50 border-red-200"
+          >
+            <Flag size={18} /> Declare
+          </Button>
+
           {/* Extras Summary */}
 
           <div className="col-span-2 mt-4 flex justify-between items-center text-xs">
