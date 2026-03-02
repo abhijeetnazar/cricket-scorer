@@ -547,6 +547,12 @@ export default function CricketScorer() {
     }
     batMatch.runs = newPlayers.striker.runs;
     batMatch.balls = newPlayers.striker.balls;
+    if (!batMatch.fours) batMatch.fours = 0;
+    if (!batMatch.sixes) batMatch.sixes = 0;
+    if (type === 'normal' || type === 'noball') {
+      if (runs === 4) batMatch.fours += 1;
+      if (runs === 6) batMatch.sixes += 1;
+    }
     if (isWicket && dismissedPlayer === 'striker') batMatch.status = 'out';
 
     let nonBatMatch = newScore.batsmen.find(b => b.name === newPlayers.nonStriker.name);
@@ -566,6 +572,10 @@ export default function CricketScorer() {
     bowlMatch.runsConceded = newPlayers.bowler.runsConceded;
     bowlMatch.wickets = newPlayers.bowler.wickets;
     bowlMatch.totalBalls = newPlayers.bowler.totalBalls;
+    if (!bowlMatch.wides) bowlMatch.wides = 0;
+    if (!bowlMatch.noballs) bowlMatch.noballs = 0;
+    if (type === 'wide') bowlMatch.wides += 1;
+    if (type === 'noball') bowlMatch.noballs += 1;
 
     // 7. Update State Locally before checks
     setScore(newScore);
@@ -745,99 +755,122 @@ export default function CricketScorer() {
     allInnings.push({ ...score, teamName: battingTeam });
 
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[70] p-4 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-          <div className="bg-blue-900 text-white p-4 flex justify-between items-center shrink-0">
-            <div>
-              <h2 className="text-xl font-bold">Match Scorecard</h2>
-            </div>
-            <div className="flex items-center gap-3">
-              <button onClick={handleExportImage} title="Export as PNG" className="text-blue-200 hover:text-white p-1 rounded hover:bg-white/10 transition-colors"><ImageIcon size={20} /></button>
-              <button onClick={handleExportPDF} title="Export as PDF" className="text-blue-200 hover:text-white p-1 rounded hover:bg-white/10 transition-colors"><FileText size={20} /></button>
-              <button onClick={() => setShowScorecard(false)} className="text-blue-200 hover:text-white font-bold text-3xl leading-none ml-2">&times;</button>
+      <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-[70] sm:p-4 backdrop-blur-sm">
+        {/* Full-screen on mobile, card on larger screens */}
+        <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl shadow-2xl flex flex-col h-full sm:max-h-[92vh] overflow-hidden">
+
+          {/* Header */}
+          <div className="bg-blue-900 text-white px-4 py-3 flex justify-between items-center shrink-0">
+            <h2 className="text-base font-bold tracking-wide">Match Scorecard</h2>
+            <div className="flex items-center gap-2">
+              <button onClick={handleExportImage} title="PNG" className="text-blue-200 hover:text-white p-1.5 rounded hover:bg-white/10 transition-colors">
+                <ImageIcon size={18} />
+              </button>
+              <button onClick={handleExportPDF} title="PDF" className="text-blue-200 hover:text-white p-1.5 rounded hover:bg-white/10 transition-colors">
+                <FileText size={18} />
+              </button>
+              <button onClick={() => setShowScorecard(false)} className="text-blue-200 hover:text-white ml-1 text-2xl leading-none font-bold w-8 h-8 flex items-center justify-center rounded hover:bg-white/10">
+                ×
+              </button>
             </div>
           </div>
 
-          <div className="p-0 overflow-y-auto flex-1 bg-gray-100" ref={scorecardRef}>
+          {/* Scrollable body */}
+          <div className="overflow-y-auto flex-1 bg-gray-100" ref={scorecardRef}>
             {allInnings.map((inn, index) => (
-              <div key={index} className="bg-white mb-2 last:mb-0 shadow-sm pb-2">
-                <div className="px-4 py-2 bg-gray-800 text-white flex justify-between items-center sticky top-0 z-10">
-                  <span className="font-bold">{inn.teamName} Innings</span>
-                  <span className="font-mono text-sm">{inn.runs}/{inn.wickets} ({inn.overs}.{inn.ballsInOver})</span>
+              <div key={index} className="bg-white mb-2 last:mb-0">
+
+                {/* Innings header */}
+                <div className="px-3 py-2 bg-gray-800 text-white flex justify-between items-center sticky top-0 z-10">
+                  <span className="font-bold text-sm">{inn.teamName} Innings</span>
+                  <span className="font-mono text-sm font-bold">{inn.runs}/{inn.wickets} <span className="text-xs font-normal text-gray-300">({inn.overs}.{inn.ballsInOver} ov)</span></span>
                 </div>
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-gray-50 text-gray-600 font-medium">
-                    <tr>
-                      <th className="px-4 py-2">Batter</th>
-                      <th className="px-2 py-2"></th>
-                      <th className="px-2 py-2 text-right">R</th>
-                      <th className="px-2 py-2 text-right">B</th>
-                      <th className="px-4 py-2 text-right">SR</th>
+
+                {/* Batting */}
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                      <th className="px-3 py-1.5 text-left font-medium">Batter</th>
+                      <th className="px-2 py-1.5 text-right font-medium">R</th>
+                      <th className="px-2 py-1.5 text-right font-medium">B</th>
+                      <th className="px-2 py-1.5 text-right font-medium">4s</th>
+                      <th className="px-2 py-1.5 text-right font-medium">6s</th>
+                      <th className="px-2 py-1.5 text-right font-medium">SR</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {inn.batsmen.map((b, i) => (
-                      <tr key={i} className={b.status === 'out' ? 'text-gray-500' : 'text-gray-900 font-medium'}>
-                        <td className="px-4 py-2 truncate max-w-[120px]">{b.name}</td>
-                        <td className="px-2 py-2 text-xs italic text-gray-400">{b.status}</td>
+                      <tr key={i} className={b.status === 'out' ? 'text-gray-400' : 'text-gray-900'}>
+                        <td className="px-3 py-2">
+                          <div className="font-medium truncate max-w-[140px]">{b.name}</div>
+                          <div className="text-xs text-gray-400 italic">{b.status}</div>
+                        </td>
                         <td className="px-2 py-2 text-right font-bold">{b.runs}</td>
-                        <td className="px-2 py-2 text-right">{b.balls}</td>
-                        <td className="px-4 py-2 text-right">{b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '-'}</td>
+                        <td className="px-2 py-2 text-right text-gray-500">{b.balls}</td>
+                        <td className="px-2 py-2 text-right text-emerald-600 font-medium">{b.fours ?? 0}</td>
+                        <td className="px-2 py-2 text-right text-purple-600 font-medium">{b.sixes ?? 0}</td>
+                        <td className="px-2 py-2 text-right text-gray-500">{b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(0) : '-'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
 
-                <div className="px-4 py-2 bg-gray-50 border-y border-gray-200 text-sm">
-                  <span className="font-semibold text-gray-700">Extras: </span>
-                  <span className="font-bold">{inn.extras.wides + inn.extras.noballs + inn.extras.byes + inn.extras.legbyes}</span>
-                  <span className="text-gray-500 ml-2 text-xs">
-                    (wd {inn.extras.wides}, nb {inn.extras.noballs}, b {inn.extras.byes}, lb {inn.extras.legbyes})
-                  </span>
+                {/* Extras */}
+                <div className="px-3 py-1.5 bg-gray-50 border-y border-gray-100 text-xs text-gray-500 flex gap-1 flex-wrap">
+                  <span className="font-semibold text-gray-600">Extras:</span>
+                  <span className="font-bold text-gray-800">{inn.extras.wides + inn.extras.noballs + inn.extras.byes + inn.extras.legbyes}</span>
+                  <span>(wd {inn.extras.wides} · nb {inn.extras.noballs} · b {inn.extras.byes} · lb {inn.extras.legbyes})</span>
                 </div>
 
-                <table className="w-full text-sm text-left mb-2">
-                  <thead className="bg-gray-50 text-gray-600 font-medium">
-                    <tr>
-                      <th className="px-4 py-2">Bowler</th>
-                      <th className="px-2 py-2 text-right">O</th>
-                      <th className="px-2 py-2 text-right">R</th>
-                      <th className="px-2 py-2 text-right">W</th>
-                      <th className="px-4 py-2 text-right">ECON</th>
+                {/* Bowling */}
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                      <th className="px-3 py-1.5 text-left font-medium">Bowler</th>
+                      <th className="px-2 py-1.5 text-right font-medium">O</th>
+                      <th className="px-2 py-1.5 text-right font-medium">R</th>
+                      <th className="px-2 py-1.5 text-right font-medium">W</th>
+                      <th className="px-2 py-1.5 text-right font-medium">WD</th>
+                      <th className="px-2 py-1.5 text-right font-medium">NB</th>
+                      <th className="px-2 py-1.5 text-right font-medium">Econ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {inn.bowlers.filter(b => b.totalBalls > 0 || b.runsConceded > 0).map((b, i) => {
                       const overs = Math.floor(b.totalBalls / 6);
                       const balls = b.totalBalls % 6;
-                      const overString = `${overs}.${balls}`;
                       const econ = b.totalBalls > 0 ? ((b.runsConceded / b.totalBalls) * 6).toFixed(1) : '-';
                       return (
                         <tr key={i}>
-                          <td className="px-4 py-2 font-medium text-gray-800 truncate max-w-[120px]">{b.name}</td>
-                          <td className="px-2 py-2 text-right">{overString}</td>
+                          <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[100px]">{b.name}</td>
+                          <td className="px-2 py-2 text-right text-gray-500">{overs}.{balls}</td>
                           <td className="px-2 py-2 text-right font-bold">{b.runsConceded}</td>
                           <td className="px-2 py-2 text-right font-bold text-blue-600">{b.wickets}</td>
-                          <td className="px-4 py-2 text-right text-gray-500">{econ}</td>
+                          <td className="px-2 py-2 text-right text-orange-500">{b.wides ?? 0}</td>
+                          <td className="px-2 py-2 text-right text-yellow-600">{b.noballs ?? 0}</td>
+                          <td className="px-2 py-2 text-right text-gray-400">{econ}</td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
 
-                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
-                  <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2"><List size={16} /> Over History</h4>
-                  <div className="space-y-3">
+                {/* Over History */}
+                <div className="px-3 py-3 bg-gray-50 border-t border-gray-100">
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <List size={13} /> Over History
+                  </h4>
+                  <div className="space-y-2">
                     {(() => {
                       const displayHistory = [...inn.history].reverse();
                       if (inn.thisOver && inn.thisOver.length > 0) {
                         displayHistory.push({ bowler: 'Current', balls: inn.thisOver, isPartial: true });
                       }
                       return displayHistory.map((over, oIdx) => (
-                        <div key={oIdx} className="flex items-center gap-3 text-sm">
-                          <span className="font-medium text-gray-500 w-12 shrink-0">Ov {oIdx + 1}</span>
-                          <span className="font-semibold text-gray-700 w-20 shrink-0 truncate">{over.bowler}</span>
-                          <div className="flex gap-1 overflow-x-auto flex-1 pb-1">
+                        <div key={oIdx} className="flex items-center gap-2 text-xs">
+                          <span className="text-gray-400 w-8 shrink-0">Ov {oIdx + 1}</span>
+                          <span className="text-gray-600 font-medium w-16 shrink-0 truncate">{over.bowler}</span>
+                          <div className="flex gap-1 overflow-x-auto flex-1">
                             {over.balls.map((b, bIdx) => <ScoreBall key={bIdx} value={b.val} type={b.type} />)}
                           </div>
                         </div>
@@ -845,6 +878,7 @@ export default function CricketScorer() {
                     })()}
                   </div>
                 </div>
+
               </div>
             ))}
           </div>
@@ -852,6 +886,7 @@ export default function CricketScorer() {
       </div>
     );
   };
+
 
   const renderAiModal = () => {
     if (!aiResponse && !isAiLoading) return null;
