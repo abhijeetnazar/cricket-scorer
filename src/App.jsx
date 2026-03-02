@@ -1475,46 +1475,34 @@ export default function CricketScorer() {
           >
             <Shield size={18} /> WICKET
           </Button>
-        </div>
+          {/* Extras Summary */}
 
-        {/* Extras Summary */}
-        <div className="text-center text-gray-400 text-xs mt-4">
-          Extras: {score.extras.wides} WD, {score.extras.noballs} NB, {score.extras.byes} B, {score.extras.legbyes} LB
-        </div>
+          <div className="col-span-2 mt-4 flex justify-between items-center text-xs">
 
-        <div className="flex flex-col gap-4 mt-6">
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              onClick={() => setShowScorecard(true)}
-              variant="action"
-              className="w-full flex items-center justify-center gap-2 py-3 font-semibold text-blue-700 bg-blue-50 border-blue-200"
-            >
-              <Activity size={18} /> Full Scorecard
-            </Button>
-            <Button
-              onClick={handleDeclare}
-              variant="action"
-              className="w-full flex items-center justify-center gap-2 py-3 font-semibold text-red-700 bg-red-50 border-red-200"
-            >
-              <Flag size={18} /> Declare
-            </Button>
-          </div>
+            {/* Left side - Extras */}
+            <div className="text-gray-400 text-left">
+              Extras: {score.extras.wides} WD, {score.extras.noballs} NB, {score.extras.byes} B, {score.extras.legbyes} LB
+            </div>
 
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                setConfirmModal({
-                  show: true,
-                  message: "End match and reset to setup screen?",
-                  onConfirm: () => setGameState('SETUP')
-                });
-              }}
-              className="flex items-center gap-2 text-gray-400 hover:text-red-500 transition-colors text-sm"
-            >
-              <RotateCcw size={14} /> Reset Match
-            </button>
+            {/* Right side - Reset Button */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  setConfirmModal({
+                    show: true,
+                    message: "End match and reset to setup screen?",
+                    onConfirm: () => setGameState('SETUP')
+                  });
+                }}
+                className="flex items-center gap-2 text-gray-400 hover:text-red-500 transition-colors text-sm"
+              >
+                <RotateCcw size={14} /> Reset Match
+              </button>
+            </div>
+
           </div>
         </div>
+
 
       </div>
     </div>
